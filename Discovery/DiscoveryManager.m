@@ -265,8 +265,7 @@
         if ([interface caseInsensitiveCompare:@"en0"] != NSOrderedSame)
             return;
 
-        CFDictionaryRef cfDict = CNCopyCurrentNetworkInfo((CFStringRef)interface);
-        NSDictionary *info = (NSDictionary *)CFBridgingRelease(cfDict);
+        NSDictionary *info = (__bridge_transfer id) CNCopyCurrentNetworkInfo ((__bridge CFStringRef) interface);
 
         if (info && [info objectForKey:@"SSID"])
         {

@@ -220,6 +220,7 @@
     [self.service.mirroredService.webAppWebView evaluateJavaScript:commandString completionHandler:^(NSString *result, NSError *error) {
         NSLog(@"evaluate Completed");
     }];
+    
     if (success)
         success(nil);
 }
@@ -243,10 +244,11 @@
     {
         NSString *messageString = [[NSString alloc] initWithData:messageData encoding:NSUTF8StringEncoding];
         NSString *commandString = [NSString stringWithFormat:@"window.connectManager.handleMessage({from: -1, message: %@ })", messageString];
+
         [self.service.mirroredService.webAppWebView evaluateJavaScript:commandString completionHandler:^(NSString *result, NSError *error) {
             NSLog(@"evaluate Completed");
         }];
-
+        
         if (success)
             success(nil);
     }

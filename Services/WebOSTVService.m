@@ -26,16 +26,13 @@
 #import "WebOSTVServiceSocketClient.h"
 #import "CTGuid.h"
 #import "CommonMacros.h"
-#import "NSMutableDictionary+NilSafe.h"
+
 #import "NSObject+FeatureNotSupported_Private.h"
-#import "CTXMLReader.h"
-#import "RemoteCameraService.h"
-#import "ScreenMirroringService.h"
 
 #define kKeyboardEnter @"\x1b ENTER \x1b"
 #define kKeyboardDelete @"\x1b DELETE \x1b"
 
-@interface WebOSTVService () <UIAlertViewDelegate, WebOSTVServiceSocketClientDelegate, RemoteCameraServiceDelegate, ScreenMirroringServiceDelegate>
+@interface WebOSTVService () <UIAlertViewDelegate, WebOSTVServiceSocketClientDelegate>
 {
     NSArray *_permissions;
 
@@ -50,9 +47,6 @@
 
     BOOL _mouseInit;
     UIAlertView *_pinAlertView;
-    
-    __weak id<RemoteCameraControlDelegate> _remoteCameraDelegate;
-    __weak id<ScreenMirroringControlDelegate> _screenMirroringDelegate;
 }
 
 @end
@@ -168,7 +162,23 @@
                 kKeyControlRight,
                 kKeyControlHome,
                 kKeyControlBack,
-                kKeyControlOK
+                kKeyControlOK,
+                kKeyboardEnter,
+                kKeyControlMenu,
+                kKeyControlInfo,
+                kKeyControlExit,
+                kKeyControlSetting,
+                kKeyControlCC,
+                kKeyControlNumber0,
+                kKeyControlNumber1,
+                kKeyControlNumber2,
+                kKeyControlNumber3,
+                kKeyControlNumber4,
+                kKeyControlNumber5,
+                kKeyControlNumber6,
+                kKeyControlNumber7,
+                kKeyControlNumber8,
+                kKeyControlNumber9
         ]];
 
         capabilities = [capabilities arrayByAddingObjectsFromArray:kMouseControlCapabilities];
@@ -235,30 +245,6 @@
 
             if (self.dlnaService) {
                 capabilities = [capabilities arrayByAddingObject:kMediaPlayerSubtitleSRT];
-            }
-        }
-
-        if (_serviceDescription.locationXML) {
-            NSError *locationXMLParseError;
-            NSDictionary *locationXMLDic = [CTXMLReader dictionaryForXMLString:_serviceDescription.locationXML error:&locationXMLParseError];
-
-            if (!locationXMLParseError) {
-                NSDictionary *deviceDic = [[locationXMLDic objectForKey:@"root"] objectForKey:@"device"];
-                NSString *appCastingFeature = [[deviceDic objectForKey:@"supportAppcastingFeatures"] objectForKey:@"text"];
-
-                if (!appCastingFeature) {
-                    NSString *appCasting = [[deviceDic objectForKey:@"appCasting"] objectForKey:@"text"];
-                    if ([@"support" isEqualToString:appCasting]) {
-                        capabilities = [capabilities arrayByAddingObject:kScreenMirroringControlScreenMirroring];
-                    }
-                } else {
-                    if ([appCastingFeature rangeOfString:@"mirroring"].location != NSNotFound) {
-                        capabilities = [capabilities arrayByAddingObject:kScreenMirroringControlScreenMirroring];
-                    }
-                    if ([appCastingFeature rangeOfString:@"remote-camera"].location != NSNotFound) {
-                        capabilities = [capabilities arrayByAddingObject:kRemoteCameraControlRemoteCamera];
-                    }
-                }
             }
         }
     } else {
@@ -332,16 +318,54 @@
 {
     NSString *title = [[NSBundle mainBundle] localizedStringForKey:@"Connect_SDK_Pair_Title" value:@"Pairing with device" table:@"ConnectSDK"];
     NSString *message = [[NSBundle mainBundle] localizedStringForKey:@"Connect_SDK_Pair_Request" value:@"Please confirm the connection on your device" table:@"ConnectSDK"];
-    NSString *ok = [[NSBundle mainBundle] localizedStringForKey:@"Connect_SDK_Pair_OK" value:@"OK" table:@"ConnectSDK"];
-    NSString *cancel = [[NSBundle mainBundle] localizedStringForKey:@"Connect_SDK_Pair_Cancel" value:@"Cancel" table:@"ConnectSDK"];
+//    NSString *ok = [[NSBundle mainBundle] localizedStringForKey:@"Connect_SDK_Pair_OK" value:@"OK" table:@"ConnectSDK"];
+//    NSString *cancel = [[NSBundle mainBundle] localizedStringForKey:@"Connect_SDK_Pair_Cancel" value:@"Cancel" table:@"ConnectSDK"];
     
-    _pairingAlert = [[UIAlertView alloc] initWithTitle:title message:message delegate:self cancelButtonTitle:cancel otherButtonTitles:ok, nil];
-    if(self.pairingType == DeviceServicePairingTypePinCode || self.pairingType == DeviceServicePairingTypeMixed){
-        _pairingAlert.alertViewStyle = UIAlertViewStylePlainTextInput;
-        _pairingAlert.message = [[NSBundle mainBundle] localizedStringForKey:@"Connect_SDK_Pair_Request_Pin" value:@"Please enter the pin code" table:@"ConnectSDK"];
-    }
-    dispatch_on_main(^{ [_pairingAlert show]; });
+//    _pairingAlert = [[UIAlertView alloc] initWithTitle:title message:message delegate:self cancelButtonTitle:cancel otherButtonTitles:ok, nil];
+//    if(self.pairingType == DeviceServicePairingTypePinCode || self.pairingType == DeviceServicePairingTypeMixed){
+//        _pairingAlert.alertViewStyle = UIAlertViewStylePlainTextInput;
+//        _pairingAlert.message = [[NSBundle mainBundle] localizedStringForKey:@"Connect_SDK_Pair_Request_Pin" value:@"Please enter the pin code" table:@"ConnectSDK"];
+//    }
+//    dispatch_on_main(^{ [self->_pairingAlert show]; });
+    UIAlertController *alert= [UIAlertController
+                                         alertControllerWithTitle: title
+                                         message: message
+                                         preferredStyle:UIAlertControllerStyleAlert];
+
+           UIAlertAction* ok = [UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault
+                                                      handler:^(UIAlertAction * action){
+                                                          //Do Some action here
+                                                          UITextField *textField = alert.textFields[0];
+                                                          NSLog(@"text was %@", textField.text);
+               if((self.pairingType == DeviceServicePairingTypePinCode || self.pairingType == DeviceServicePairingTypeMixed)) {
+                   NSString *pairingCode = textField.text;
+                   [self sendPairingKey:pairingCode success:nil failure:nil];
+               }
+           }];
+           UIAlertAction* cancel = [UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleDefault
+                                                          handler:^(UIAlertAction * action) {
+
+                                                              NSLog(@"cancel btn");
+               [self disconnect];
+                                                              [alert dismissViewControllerAnimated:YES completion:nil];
+
+                                                          }];
+
+           [alert addAction:ok];
+           [alert addAction:cancel];
+
+           [alert addTextFieldWithConfigurationHandler:^(UITextField *textField) {
+               textField.placeholder = @"placeHolderText";
+               textField.keyboardType = UIKeyboardTypeDefault;
+           }];
+
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [[self topViewController] presentViewController:alert animated:YES completion:nil];
+    });
+        
+  
 }
+
 
 -(void)alertView:(UIAlertView *)alertView didDismissWithButtonIndex:(NSInteger)buttonIndex
 {
@@ -478,6 +502,17 @@
     return appInfo;
 }
 
++ (LauchPointInfo *)lauchPointInfoFromDictionary:(NSDictionary *)info
+{
+    LauchPointInfo *lauchPointInfo = [[LauchPointInfo alloc] init];
+    lauchPointInfo.name = [info objectForKey:@"title"];
+    lauchPointInfo.id = [info objectForKey:@"id"];
+    lauchPointInfo.icon = [info objectForKey:@"icon"];
+    lauchPointInfo.rawData = [info copy];
+
+    return lauchPointInfo;
+}
+
 + (ExternalInputInfo *)externalInputInfoFromDictionary:(NSDictionary *)info
 {
     ExternalInputInfo *externalInputInfo = [[ExternalInputInfo alloc] init];
@@ -515,6 +550,28 @@
         [foundApps enumerateObjectsUsingBlock:^(NSDictionary *appInfo, NSUInteger idx, BOOL *stop)
         {
             [appList addObject:[WebOSTVService appInfoFromDictionary:appInfo]];
+        }];
+
+        if (success)
+            success(appList);
+    };
+    command.callbackError = failure;
+    [command send];
+}
+
+- (void)getListLaunchPointsWithSuccess:(AppListSuccessBlock)success failure:(FailureBlock)failure
+{
+    NSURL *URL = [NSURL URLWithString:@"ssap://com.webos.applicationManager/listLaunchPoints"];
+
+    ServiceCommand *command = [[ServiceCommand alloc] initWithDelegate:self.socket target:URL payload:nil];
+    command.callbackComplete = ^(NSDictionary *responseDic)
+    {
+        NSArray *foundApps = [responseDic objectForKey:@"launchPoints"];
+        NSMutableArray *appList = [[NSMutableArray alloc] init];
+
+        [foundApps enumerateObjectsUsingBlock:^(NSDictionary *appInfo, NSUInteger idx, BOOL *stop)
+        {
+            [appList addObject:[WebOSTVService lauchPointInfoFromDictionary:appInfo]];
         }];
 
         if (success)
@@ -1197,15 +1254,7 @@
 
     command.callbackComplete = (^(NSDictionary *responseDic)
     {
-        int fromString = 0;
-        if ([responseDic objectForKey:@"volume"])
-        {
-            fromString = [[responseDic objectForKey:@"volume"] intValue];
-        }
-        else
-        {
-            fromString = [[[responseDic objectForKey:@"volumeStatus"] objectForKey:@"volume"] intValue];
-        }
+        int fromString = [[responseDic objectForKey:@"volume"] intValue];
         float volVal = fromString / 100.0;
 
         if (success)
@@ -1269,15 +1318,7 @@
 
     ServiceSubscription *subscription = [self.socket addSubscribe:URL payload:nil success:^(NSDictionary *responseObject)
     {
-        float volumeValue = 0;
-        if ([responseObject valueForKey:@"volume"])
-        {
-            volumeValue = [[responseObject valueForKey:@"volume"] floatValue] / 100.0;
-        }
-        else
-        {
-            volumeValue = [[[responseObject valueForKey:@"volumeStatus"] valueForKey:@"volume"] floatValue] / 100.0;
-        }
+        float volumeValue = [[responseObject valueForKey:@"volume"] floatValue] / 100.0;
 
         if (success)
             success(volumeValue);
@@ -1373,23 +1414,9 @@
 
 - (void)setChannel:(ChannelInfo *)channelInfo success:(SuccessBlock)success failure:(FailureBlock)failure
 {
-    if (!channelInfo)
-    {
-        if (failure)
-            failure([ConnectError generateErrorWithCode:ConnectStatusCodeArgumentError andDetails:@"channelInfo cannot be empty"]);
-        return;
-    }
     NSURL *URL = [NSURL URLWithString:@"ssap://tv/openChannel"];
+    NSDictionary *payload = @{ @"channelId" : channelInfo.id};
 
-    NSMutableDictionary *payload = [NSMutableDictionary dictionary];
-    if(channelInfo.id){
-        [payload setNullableObject:channelInfo.id forKey:@"channelId"];
-    }
-    
-    if(channelInfo.number){
-        [payload setNullableObject:channelInfo.number forKey:@"channelNumber"];
-    }
-    
     ServiceCommand *command = [ServiceAsyncCommand commandWithDelegate:self.socket target:URL payload:payload];
     command.callbackComplete = success;
     command.callbackError = failure;
@@ -1551,6 +1578,85 @@
     [self sendNotSupportedFailure:failure];
 }
 
+- (void)enterWithSuccess:(SuccessBlock)success failure:(FailureBlock)failure
+{
+    [self sendMouseButton:WebOSTVMouseButtonEnter success:success failure:failure];
+}
+
+- (void)menuWithSuccess:(SuccessBlock)success failure:(FailureBlock)failure
+{
+    [self sendMouseButton:WebOSTVMouseButtonMenu success:success failure:failure];
+}
+
+- (void)infoWithSuccess:(SuccessBlock)success failure:(FailureBlock)failure
+{
+    [self sendMouseButton:WebOSTVMouseButtonInfo success:success failure:failure];
+}
+
+- (void)exitWithSuccess:(SuccessBlock)success failure:(FailureBlock)failure
+{
+    [self sendMouseButton:WebOSTVMouseButtonExit success:success failure:failure];
+}
+
+- (void)settingWithSuccess:(SuccessBlock)success failure:(FailureBlock)failure
+{
+    [self sendMouseButton:WebOSTVMouseButtonSetting success:success failure:failure];
+}
+
+- (void)ccWithSuccess:(SuccessBlock)success failure:(FailureBlock)failure
+{
+    [self sendMouseButton:WebOSTVMouseButtonCC success:success failure:failure];
+}
+
+- (void)number0WithSuccess:(SuccessBlock)success failure:(FailureBlock)failure
+{
+    [self sendMouseButton:WebOSTVMouseButtonNumber0 success:success failure:failure];
+}
+
+- (void)number1WithSuccess:(SuccessBlock)success failure:(FailureBlock)failure
+{
+    [self sendMouseButton:WebOSTVMouseButtonNumber1 success:success failure:failure];
+}
+
+- (void)number2WithSuccess:(SuccessBlock)success failure:(FailureBlock)failure
+{
+    [self sendMouseButton:WebOSTVMouseButtonNumber2 success:success failure:failure];
+}
+
+- (void)number3WithSuccess:(SuccessBlock)success failure:(FailureBlock)failure
+{
+    [self sendMouseButton:WebOSTVMouseButtonNumber3 success:success failure:failure];
+}
+
+- (void)number4WithSuccess:(SuccessBlock)success failure:(FailureBlock)failure
+{
+    [self sendMouseButton:WebOSTVMouseButtonNumber4 success:success failure:failure];
+}
+
+- (void)number5WithSuccess:(SuccessBlock)success failure:(FailureBlock)failure
+{
+    [self sendMouseButton:WebOSTVMouseButtonNumber5 success:success failure:failure];
+}
+
+- (void)number6WithSuccess:(SuccessBlock)success failure:(FailureBlock)failure
+{
+    [self sendMouseButton:WebOSTVMouseButtonNumber6 success:success failure:failure];
+}
+
+- (void)number7WithSuccess:(SuccessBlock)success failure:(FailureBlock)failure
+{
+    [self sendMouseButton:WebOSTVMouseButtonNumber7 success:success failure:failure];
+}
+
+- (void)number8WithSuccess:(SuccessBlock)success failure:(FailureBlock)failure
+{
+    [self sendMouseButton:WebOSTVMouseButtonNumber8 success:success failure:failure];
+}
+
+- (void)number9WithSuccess:(SuccessBlock)success failure:(FailureBlock)failure
+{
+    [self sendMouseButton:WebOSTVMouseButtonNumber9 success:success failure:failure];
+}
 #pragma mark - Mouse
 
 - (id<MouseControl>)mouseControl
@@ -1783,20 +1889,45 @@
 
     WebOSWebAppSession *webAppSession = _webAppSessions[launchSession.appId];
 
-    if (webAppSession){
-        [webAppSession disconnectFromWebApp];
+    if (webAppSession && webAppSession.connected)
+    {
+        // This is a hack to enable closing of bridged web apps that we didn't open
+        NSDictionary *closeCommand = @{
+                @"contentType" : @"connectsdk.serviceCommand",
+                @"serviceCommand" : @{
+                        @"type" : @"close"
+                }
+        };
+
+        [webAppSession sendJSON:closeCommand success:^(id responseObject)
+        {
+            [webAppSession disconnectFromWebApp];
+
+            if (success)
+                success(responseObject);
+        } failure:^(NSError *closeError)
+        {
+            [webAppSession disconnectFromWebApp];
+
+            if (failure)
+                failure(closeError);
+        }];
+    } else
+    {
+        if (webAppSession)
+            [webAppSession disconnectFromWebApp];
+
+        NSURL *URL = [NSURL URLWithString:@"ssap://webapp/closeWebApp"];
+
+        NSMutableDictionary *payload = [NSMutableDictionary new];
+        if (launchSession.appId) [payload setValue:launchSession.appId forKey:@"webAppId"];
+        if (launchSession.sessionId) [payload setValue:launchSession.sessionId forKey:@"sessionId"];
+
+        ServiceCommand *command = [ServiceAsyncCommand commandWithDelegate:self.socket target:URL payload:payload];
+        command.callbackComplete = success;
+        command.callbackError = failure;
+        [command send];
     }
-    
-    NSURL *URL = [NSURL URLWithString:@"ssap://webapp/closeWebApp"];
-    
-    NSMutableDictionary *payload = [NSMutableDictionary new];
-    if (launchSession.appId) [payload setValue:launchSession.appId forKey:@"webAppId"];
-    if (launchSession.sessionId) [payload setValue:launchSession.sessionId forKey:@"sessionId"];
-    
-    ServiceCommand *command = [ServiceAsyncCommand commandWithDelegate:self.socket target:URL payload:payload];
-    command.callbackComplete = success;
-    command.callbackError = failure;
-    [command send];
 }
 
 - (void)joinWebApp:(LaunchSession *)webAppLaunchSession success:(WebAppLaunchSuccessBlock)success failure:(FailureBlock)failure
@@ -2365,140 +2496,23 @@
     return [[WebOSWebAppSession alloc] initWithLaunchSession:launchSession service:service];
 }
 
-#pragma mark - ScreenMirroringControl
-
-- (id<ScreenMirroringControl>)screenMirroringControl {
-    [[ScreenMirroringService sharedInstance] setDelegate:self];
-    return self;
+- (UIViewController*)topViewController {
+    return [self topViewControllerWithRootViewController:[UIApplication sharedApplication].keyWindow.rootViewController];
 }
 
-- (CapabilityPriorityLevel)screenMirroringControlPriority {
-    return CapabilityPriorityLevelHigh;
-}
-
-- (void)startScreenMirroringWithSettings:(nullable NSDictionary<NSString *, id> *)settings {
-    NSDictionary *allDevices = [[DiscoveryManager sharedManager] allDevices];
-    ConnectableDevice *device;
-
-    if (allDevices && allDevices.count > 0)
-        device = [allDevices objectForKey:self.serviceDescription.address];
-    
-    [[ScreenMirroringService sharedInstance] startMirroring:device settings:settings];
-}
-
-- (void)startScreenMirroring {
-    [self startScreenMirroringWithSettings:nil];
-}
-
-- (void)pushSampleBuffer:(CMSampleBufferRef)sampleBuffer with:(RPSampleBufferType)sampleBufferType {
-    [[ScreenMirroringService sharedInstance] pushSampleBuffer:sampleBuffer with:sampleBufferType];
-}
-
-- (void)stopScreenMirroring {
-    [[ScreenMirroringService sharedInstance] stopMirroring];
-}
-
-- (void)setScreenMirroringDelegate:(__weak id<ScreenMirroringControlDelegate>)delegate {
-    _screenMirroringDelegate = delegate;
-}
-
-#pragma mark - ScreenMirroringServiceDelegate
-- (void)screenMirroringDidStart:(BOOL)result {
-    if(_screenMirroringDelegate != nil && [_screenMirroringDelegate respondsToSelector:@selector(screenMirroringDidStart:)]){
-        [_screenMirroringDelegate screenMirroringDidStart:result];
+- (UIViewController*)topViewControllerWithRootViewController:(UIViewController*)rootViewController {
+    if ([rootViewController isKindOfClass:[UITabBarController class]]) {
+        UITabBarController* tabBarController = (UITabBarController*)rootViewController;
+        return [self topViewControllerWithRootViewController:tabBarController.selectedViewController];
+    } else if ([rootViewController isKindOfClass:[UINavigationController class]]) {
+        UINavigationController* navigationController = (UINavigationController*)rootViewController;
+        return [self topViewControllerWithRootViewController:navigationController.visibleViewController];
+    } else if (rootViewController.presentedViewController) {
+        UIViewController* presentedViewController = rootViewController.presentedViewController;
+        return [self topViewControllerWithRootViewController:presentedViewController];
+    } else {
+        return rootViewController;
     }
 }
-
-- (void)screenMirroringDidStop:(BOOL)result {
-    if(_screenMirroringDelegate != nil && [_screenMirroringDelegate respondsToSelector:@selector(screenMirroringDidStop:)]){
-        [_screenMirroringDelegate screenMirroringDidStop:result];
-    }
-}
-
-- (void)screenMirroringErrorDidOccur:(ScreenMirroringError)error {
-    if(_screenMirroringDelegate != nil && [_screenMirroringDelegate respondsToSelector:@selector(screenMirroringErrorDidOccur:)]){
-        [_screenMirroringDelegate screenMirroringErrorDidOccur:error];
-    }
-}
-
-#pragma mark - RemoteCameraControl
-
-- (id<RemoteCameraControl>)remoteCameraControl {
-    [[RemoteCameraService sharedInstance] setDelegate:self];
-    return self;
-}
-
-- (CapabilityPriorityLevel)remoteCameraControlPriority {
-    return CapabilityPriorityLevelHigh;
-}
-
-- (UIView *)startRemoteCameraWithSettings:(nullable NSDictionary<NSString *, id> *)settings{
-    NSDictionary *allDevices = [[DiscoveryManager sharedManager] allDevices];
-    ConnectableDevice *device;
-
-    if (allDevices && allDevices.count > 0)
-        device = [allDevices objectForKey:self.serviceDescription.address];
-    
-    return [[RemoteCameraService sharedInstance] startRemoteCamera:device settings:settings];
-}
-
-- (UIView *)startRemoteCamera {
-    return [self startRemoteCameraWithSettings:nil];
-}
-
-- (void)stopRemoteCamera {
-    [[RemoteCameraService sharedInstance] stopRemoteCamera];
-}
-
-- (void)setLensFacing:(int)lensFacing {
-    [[RemoteCameraService sharedInstance] setLensFacing:lensFacing];
-    return;
-}
-
-- (void)setMicMute:(BOOL)micMute {
-    [[RemoteCameraService sharedInstance] setMicMute:micMute];
-    return;
-}
-
-- (void)setRemoteCameraDelegate:(__weak id<RemoteCameraControlDelegate>)delegate {
-    _remoteCameraDelegate = delegate;
-}
-
-#pragma mark - RemoteCameraServiceDelegate
-- (void)remoteCameraDidPair {
-    if(_remoteCameraDelegate != nil && [_remoteCameraDelegate respondsToSelector:@selector(remoteCameraDidPair)]){
-        [_remoteCameraDelegate remoteCameraDidPair];
-    }
-}
-
-- (void)remoteCameraDidPlay {
-    if(_remoteCameraDelegate != nil && [_remoteCameraDelegate respondsToSelector:@selector(remoteCameraDidPlay)]){
-        [_remoteCameraDelegate remoteCameraDidPlay];
-    }
-}
-
-- (void)remoteCameraDidStart:(BOOL)result {
-    if(_remoteCameraDelegate != nil && [_remoteCameraDelegate respondsToSelector:@selector(remoteCameraDidStart:)]){
-        [_remoteCameraDelegate remoteCameraDidStart:result];
-    }
-}
-
-- (void)remoteCameraDidStop:(BOOL)result {
-    if(_remoteCameraDelegate != nil && [_remoteCameraDelegate respondsToSelector:@selector(remoteCameraDidStop:)]){
-        [_remoteCameraDelegate remoteCameraDidStop:result];
-    }
-}
-
-- (void)remoteCameraDidChange:(RemoteCameraProperty)property{
-    if(_remoteCameraDelegate != nil && [_remoteCameraDelegate respondsToSelector:@selector(remoteCameraDidChange:)]){
-        [_remoteCameraDelegate remoteCameraDidChange:property];
-    }
-}
-
-- (void)remoteCameraErrorDidOccur:(RemoteCameraError)error {
-    if(_remoteCameraDelegate != nil && [_remoteCameraDelegate respondsToSelector:@selector(remoteCameraErrorDidOccur:)]){
-        [_remoteCameraDelegate remoteCameraErrorDidOccur:error];
-    }
-}
-
 @end
+

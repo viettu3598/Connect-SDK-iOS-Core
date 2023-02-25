@@ -324,7 +324,7 @@
     webViewConfig.mediaPlaybackRequiresUserAction = false;
 
     _webAppWebView = [[WKWebView alloc] initWithFrame:self.secondWindow.bounds configuration:webViewConfig];
-
+    
     AirPlayServiceViewController *secondScreenViewController = [[AirPlayServiceViewController alloc] init];
     secondScreenViewController.view = _webAppWebView;
     _webAppWebView.navigationDelegate = self;
@@ -380,7 +380,7 @@
     if (self.webAppWebView && self.connected)
     {
         NSString *webAppHost = self.webAppWebView.URL.host;
-
+        
         if ([webAppLaunchSession.appId rangeOfString:webAppHost].location != NSNotFound)
         {
             AirPlayWebAppSession *webAppSession = [[AirPlayWebAppSession alloc] initWithLaunchSession:webAppLaunchSession service:self.service];
@@ -474,7 +474,7 @@
     self.launchFailureBlock = nil;
 }
 
-- (BOOL)webView:(WKWebView *)webView shouldStartLoadWithRequest:(NSURLRequest *)request
+- (BOOL)webView:(WKWebView *)webView shouldStartLoadWithRequest:(NSURLRequest *)request navigationType:(UIWebViewNavigationType)navigationType
 {
     if ([request.URL.absoluteString hasPrefix:@"connectsdk://"])
     {
@@ -524,7 +524,7 @@
     self.launchFailureBlock = nil;
 }
 
-- (void)webViewDidStartLoad:(WKWebView *)webView
+- (void)webViewDidStartLoad:(UIWebView *)webView
 {
     DLog(@"%@", webView.request.URL.absoluteString);
 }

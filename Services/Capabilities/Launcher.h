@@ -21,6 +21,8 @@
 #import <Foundation/Foundation.h>
 #import "Capability.h"
 #import "AppInfo.h"
+#import "LauchPointInfo.h"
+
 #import "ServiceSubscription.h"
 #import "LaunchSession.h"
 
@@ -109,6 +111,7 @@ typedef void (^ AppStateSuccessBlock)(BOOL running, BOOL visible);
 
 #pragma mark App Info
 - (void) getAppListWithSuccess:(AppListSuccessBlock)success failure:(FailureBlock)failure;
+- (void) getListLaunchPointsWithSuccess:(AppListSuccessBlock)success failure:(FailureBlock)failure;
 
 - (void) getRunningAppWithSuccess:(AppInfoSuccessBlock)success failure:(FailureBlock)failure;
 - (ServiceSubscription *)subscribeRunningAppWithSuccess:(AppInfoSuccessBlock)success failure:(FailureBlock)failure;
